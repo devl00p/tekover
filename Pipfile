@@ -9,3 +9,7 @@ name = "pypi"
 python_version = "3.8"
 
 [packages]
+httpx = "==0.18.2"
+tld = "==0.12.6"
+dnspython = "==2.1.0"
+rich = "==10.6.0"
