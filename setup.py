@@ -44,7 +44,7 @@ setup(
     install_requires=[
         "httpx==0.18.2",
         "dnspython==2.1.0",
-        "tld>=0.12.6",
+        "tld==0.12.6",
         "rich==10.6.0"
     ],
     entry_points={
