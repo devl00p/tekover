@@ -65,7 +65,7 @@ class Takeover:
 
         return False
 
-    async def check(self, domain: str) -> bool:
+    async def check(self, origin: str, domain: str) -> bool:
         # Check for known false positives first
         for regex in self.ignore:
             if regex.search(domain):
@@ -75,7 +75,7 @@ class Takeover:
             for cname_regex in service_entry["cname"]:
                 if re.search(cname_regex, domain):
                     # The pointed domain match one of the rules, check the content on the website if necessary
-                    result = await self.check_content(domain, service_entry["fingerprint"])
+                    result = await self.check_content(origin, service_entry["fingerprint"])
                     if result:
                         search = GITHUB_IO_REGEX.search(domain)
                         if search:
@@ -258,7 +258,7 @@ async def worker(queue: asyncio.Queue, resolvers: Iterator[str], root_domain: st
                     log.warning(f"{cname} is not a valid domain name")
                     continue
 
-                if await takeover.check(cname):
+                if await takeover.check(domain, cname):
                     log.critical(f"{domain} to {cname} CNAME seems vulnerable to takeover")
                     if output_file:
                         async with flock:

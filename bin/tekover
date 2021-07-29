@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import sys
 from pathlib import Path
-import asyncio
 
 sys.path.append(str(Path(__file__).parent.parent))
 from tekover.tekover import tekover_main_wrapper
 
-tekover_main_wrapper()
+
+if __name__ == "__main__":
+    tekover_main_wrapper()
