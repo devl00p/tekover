@@ -30,6 +30,7 @@ log = logging.getLogger("rich")
 
 IPV4_REGEX = r"(\d+)\.(\d+)\.(\d+)\.(\d+)"
 GITHUB_IO_REGEX = re.compile(r"([a-z0-9]+)\.github\.io$")
+MY_SHOPIFY_REGEX = re.compile(r"([a-z0-9-]+)\.myshopify\.com$")
 
 current_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 FINGERPRINTS_FILENAME = os.path.join(current_dir, "data", "fingerprints.json")
@@ -51,9 +52,9 @@ class Takeover:
         if fingerprints:
             async with httpx.AsyncClient() as client:
                 results = await asyncio.gather(
-                        client.get(f"http://{subdomain}/", timeout=10),
-                        client.get(f"https://{subdomain}/", timeout=10),
-                        return_exceptions=True
+                    client.get(f"http://{subdomain}/", timeout=10),
+                    client.get(f"https://{subdomain}/", timeout=10),
+                    return_exceptions=True
                 )
                 for result in results:
                     if isinstance(result, BaseException):
@@ -63,7 +64,6 @@ class Takeover:
                             return True
 
         return False
-
 
     async def check(self, domain: str) -> bool:
         # Check for known false positives first
@@ -88,6 +88,28 @@ class Takeover:
                                         return True
                             except httpx.RequestError as exception:
                                 log.warning(f"HTTP request to https://github.com/{username} failed")
+                            return False
+
+                        search = MY_SHOPIFY_REGEX.search(domain)
+                        if search:
+                            # Check for myshopify false positives
+                            shop_name = search.group(1)
+                            try:
+                                async with httpx.AsyncClient() as client:
+                                    # Tip from https://github.com/buckhacker/SubDomainTakeoverTools
+                                    response = await client.get(
+                                        (
+                                            "https://app.shopify.com/services/signup/check_availability.json?"
+                                            f"shop_name={shop_name}&email=test@example.com"
+                                        ),
+                                        timeout=10.
+                                    )
+                                    data = response.json()
+                                    if data["status"] == "available":
+                                        return True
+                            except httpx.RequestError as exception:
+                                log.warning(f"HTTP request to Shopify API failed")
+
                             return False
 
                         return True
@@ -151,6 +173,7 @@ def get_lines_count(filename: str) -> int:
             count += 1
     return count
 
+
 async def feed_queue(queue: asyncio.Queue, domain: str, event: asyncio.Event, tasks_count: int, filename: str):
     count_lines = get_lines_count(filename)
     with Progress() as progress:
@@ -158,7 +181,7 @@ async def feed_queue(queue: asyncio.Queue, domain: str, event: asyncio.Event, ta
         with open(filename, errors="ignore") as fd:
             for line in fd:
                 sub = line.strip()
-                
+
                 if not sub:
                     progress.update(task, advance=1)
                     continue
@@ -188,8 +211,10 @@ async def feed_queue(queue: asyncio.Queue, domain: str, event: asyncio.Event, ta
 
             progress.update(task, advance=1)
 
+
 takeover = Takeover()
 flock = asyncio.Lock()
+
 
 async def worker(queue: asyncio.Queue, resolvers: Iterator[str], root_domain: str, verbose: bool, output_file: str):
     global takeover
@@ -252,6 +277,7 @@ def load_resolvers() -> List[str]:
         shuffle(resolvers)
         return resolvers
 
+
 async def test_resolvers(resolvers: List[str]) -> List[str]:
     valid_resolvers = []
     tasks = [test_resolver(ip) for ip in resolvers]
@@ -266,7 +292,6 @@ async def test_resolvers(resolvers: List[str]) -> List[str]:
             progress.update(task, advance=1)
 
     return valid_resolvers
-
 
 
 async def tekover_main():
@@ -319,6 +344,7 @@ async def tekover_main():
 
     await asyncio.gather(*tasks)
     log.info("Done")
+
 
 def tekover_main_wrapper():
     asyncio.run(tekover_main())
