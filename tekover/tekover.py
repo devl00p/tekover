@@ -126,13 +126,21 @@ class Takeover:
         root_domain = get_fld(domain, fix_protocol=True)
         try:
             # We use this request to see if this is an unregistered domain
-            answers = await dns.asyncresolver.resolve(root_domain, "SOA", raise_on_no_answer=False)
+            await dns.asyncresolver.resolve(root_domain, "SOA", raise_on_no_answer=False)
         except dns.resolver.NXDOMAIN:
             return True
         except BaseException as exception:
             log.warning(f"ANY request for {root_domain}: {exception}")
 
         return False
+
+
+async def get_wildcard_responses(domain: str) -> List[str]:
+    try:
+        results = await dns.asyncresolver.resolve(f"supercalifragilisticexpialidocious.{domain}", "CNAME")
+    except dns.resolver.NXDOMAIN:
+        return []
+    return [record.to_text().strip(".") for record in results]
 
 
 def banner():
@@ -216,10 +224,10 @@ takeover = Takeover()
 flock = asyncio.Lock()
 
 
-async def worker(queue: asyncio.Queue, resolvers: Iterator[str], root_domain: str, verbose: bool, output_file: str):
+async def worker(queue: asyncio.Queue, resolvers: Iterator[str], root_domain: str, verbose: bool, output_file: str,
+                 bad_responses: List[str]):
     global takeover
     global flock
-    loop = asyncio.get_event_loop()
 
     while True:
         try:
@@ -247,6 +255,11 @@ async def worker(queue: asyncio.Queue, resolvers: Iterator[str], root_domain: st
 
             for answer in answers:
                 cname = answer.to_text().strip(".")
+
+                if cname in bad_responses:
+                    # Those are wildcard responses and we don't care
+                    continue
+
                 if verbose:
                     log.info(f"Record {domain} points to {cname}")
 
@@ -325,6 +338,10 @@ async def tekover_main():
     )
     args = parser.parse_args()
 
+    wildcard_responses = await get_wildcard_responses(args.domain)
+    if wildcard_responses:
+        log.warning(f"*.{args.domain} has generic responses {', '.join(wildcard_responses)} that will be ignored.")
+
     resolvers = load_resolvers()
     if not args.skip_check:
         log.info("Testing resolvers...")
@@ -340,7 +357,11 @@ async def tekover_main():
     resolvers_cycle = cycle(resolvers)
     root_domain = get_fld(args.domain, fix_protocol=True)
     for __ in range(args.tasks):
-        tasks.append(asyncio.create_task(worker(sub_queue, resolvers_cycle, root_domain, args.verbose, args.output)))
+        tasks.append(
+            asyncio.create_task(
+                worker(sub_queue, resolvers_cycle, root_domain, args.verbose, args.output, wildcard_responses)
+            )
+        )
 
     await asyncio.gather(*tasks)
     log.info("Done")
