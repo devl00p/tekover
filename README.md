@@ -36,7 +36,3 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Output file where to write vulnerable domains. Append mode.
 ```
-
-## Example
-
-[![asciicast](https://asciinema.org/a/Kd8dNXFtEjHaTSrxxsjCvqn2I.svg)](https://asciinema.org/a/Kd8dNXFtEjHaTSrxxsjCvqn2I)
