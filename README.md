@@ -19,12 +19,12 @@ A subdomain takeover scanner using Python asyncio framework.
           ░         ░   ░ ░░ ░ ░ ░ ░ ▒       ░░     ░     ░░   ░ 
                     ░  ░░  ░       ░ ░        ░     ░  ░   ░     
                                              ░                   
-usage: tekover [-h] [--tasks TASKS] [-w WORDLIST] [-v] [--skip-check] [-o OUTPUT] domain
+usage: tekover [-h] [--tasks TASKS] [-w WORDLIST] [-v] [--skip-check] [-o OUTPUT] domain [domain ...]
 
 Tekover: Subdomain takeover scanner
 
 positional arguments:
-  domain                Domain name to scan for subdomain takeovers
+  domain                Domain name to scan for subdomain takeovers. May be either domain name of filename containing domains.
 
 optional arguments:
   -h, --help            show this help message and exit

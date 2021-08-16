@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 
 
 # Main
